@@ -1,0 +1,13 @@
+[package]
+name = "stackoverflow-scraping-with-rust"
+version = "0.1.0"
+authors = ["chaudharypraveen98 <chaudharypraveen98@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.10", features = ["json"] }
+tokio = { version = "0.2", features = ["full"] }
+select = "0.5.0"
+
