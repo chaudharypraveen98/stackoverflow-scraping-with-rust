@@ -1,28 +1,103 @@
+extern crate clap;
 extern crate reqwest;
 extern crate select;
 extern crate tokio;
+
+use clap::{App, Arg};
+use rand::seq::SliceRandom;
 use select::document::Document;
-use select::predicate::{Attr, Class, Name, Predicate};
+use select::predicate::{Attr, Class, Name, Or, Predicate};
 
 fn main() {
-    hacker_news("https://stackoverflow.com/questions/tagged/rust");
+    let matches = App::new("StackOverflow Scraper")
+        .version("1.0")
+        .author("Praveen Chaudhary <chaudharypraveen98@gmail.com>")
+        .about("It will scrape questions from stackoverflow depending on the tag.")
+        .arg(
+            Arg::with_name("tag")
+                .short("t")
+                .long("tag")
+                .takes_value(true)
+                .help("takes tag and scrape according to this"),
+        )
+        .arg(
+            Arg::with_name("count")
+                .short("c")
+                .long("count")
+                .takes_value(true)
+                .help("gives n count of posts"),
+        )
+        .get_matches();
+
+    if matches.is_present("tag") && matches.is_present("count") {
+        let url = format!(
+            "https://stackoverflow.com/questions/tagged/{}?tab=Votes",
+            matches.value_of("tag").unwrap()
+        );
+        let count: i32 = matches.value_of("count").unwrap().parse::<i32>().unwrap();
+        hacker_news(&url, count as usize);
+    } else if matches.is_present("tag") {
+        let url = format!(
+            "https://stackoverflow.com/questions/tagged/{}?tab=Votes",
+            matches.value_of("tag").unwrap()
+        );
+        hacker_news(&url, 16);
+    } else if matches.is_present("count") {
+        let url = get_random_url();
+        let count: i32 = matches.value_of("count").unwrap().parse::<i32>().unwrap();
+        hacker_news(&url, count as usize);
+    } else {        
+        let url = get_random_url();        
+        hacker_news(&url, 16);
+    }
 }
+
 #[tokio::main]
-async fn hacker_news(url: &str) -> Result<(), reqwest::Error> {
-    let resp = reqwest::get(url)
-        .await?;
+async fn hacker_news(url: &str, count: usize) -> Result<(), reqwest::Error> {
+    let resp = reqwest::get(url).await?;
     // println!("body = {:?}", resp.text().await?);
     // assert!(resp.status().is_success());
     let document = Document::from(&*resp.text().await?);
 
-    for node in document.find(Class("mln24")) {
-        let question = node.find(Class("excerpt")).next().unwrap().text();
-        let title_element = node.find(Class("question-hyperlink")).next().unwrap();
+    for node in document.select(Class("mln24")).take(count) {
+        let question = node.select(Class("excerpt")).next().unwrap().text();
+        let title_element = node.select(Class("question-hyperlink")).next().unwrap();
         let title = title_element.text();
         let question_link = title_element.attr("href").unwrap();
-
-        println!("Question       => {}\nQuestion-link  => https://stackoverflow.com{}\nQuestion-title => {}",question,question_link,title);
-        println!("\n-------------------------------------------------------------\n");
+        let votes = node.select(Class("vote-count-post")).next().unwrap().text();
+        let views = node.select(Class("views")).next().unwrap().text();
+        let striped_views = views.trim();
+        let tags = node
+            .select(Attr("class", "post-tag grid--cell"))
+            .map(|tag| tag.text())
+            .collect::<Vec<_>>();
+        let answer = node
+            .select(Or(
+                Attr("class", "status answered-accepted").descendant(Name("strong")),
+                Attr("class", "status answered").descendant(Name("strong")),
+            ))
+            .next()
+            .unwrap()
+            .text();
+        println!("Question       => {}", question);
+        println!("Question-link  => https://stackoverflow.com{}",question_link);
+        println!("Question-title => {}", title);
+        println!("Votes          => {}", votes);
+        println!("Views          => {}", striped_views);
+        println!("Tags           => {}", tags.join(" ,"));
+        println!("Answers        => {}", answer);
+        println!("-------------------------------------------------------------\n");
     }
     Ok(())
+}
+
+// Getting random tag
+fn get_random_url() -> String {
+    let default_tags = vec!["python", "rust", "c#", "android", "html", "javascript"];
+    let random_tag = default_tags.choose(&mut rand::thread_rng()).unwrap();
+    let url = format!(
+        "https://stackoverflow.com/questions/tagged/{}?tab=Votes",
+        random_tag
+    );
+    url.to_string()
 }
