@@ -10,9 +10,7 @@ It will extract the title, question link, answers count, view count and votes fr
 
 <h3>Topics -> rust, reqwest, selectrs, scraping</h3>
 <h5>Preview Link -> <u><a href="https://drive.google.com/file/d/1SjQ0U1JZF6nn74PgpHDnurwvjEGGl-VH/preview">stackoverflow-scraping-with-rust</a></u></h5>
-<h5>Source Code Link -> <u><a href="https://github.com/chaudharypraveen98/stackoverflow-scraping-with-rust">GitHub</a></u></h5>
-
-<img class="img-fluid" src="https://raw.githubusercontent.com/chaudharypraveen98/stackoverflow-scraping-with-rust/master/Rust%20Scraping.png" alt="stackoverflow-scraping-with-rust"/>                        
+<h5>Source Code Link -> <u><a href="https://github.com/chaudharypraveen98/stackoverflow-scraping-with-rust">GitHub</a></u></h5>                       
 
 **What We are going to do?**
 <ol>
