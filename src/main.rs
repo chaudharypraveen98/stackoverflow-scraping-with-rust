@@ -6,7 +6,7 @@ extern crate tokio;
 use clap::{App, Arg};
 use rand::seq::SliceRandom;
 use select::document::Document;
-use select::predicate::{Attr, Class, Name, Or, Predicate};
+use select::predicate::{Class, Name, Predicate};
 
 fn main() {
     let matches = App::new("StackOverflow Scraper")
@@ -46,8 +46,8 @@ fn main() {
         let url = get_random_url();
         let count: i32 = matches.value_of("count").unwrap().parse::<i32>().unwrap();
         hacker_news(&url, count as usize);
-    } else {        
-        let url = get_random_url();        
+    } else {
+        let url = get_random_url();
         hacker_news(&url, 16);
     }
 }
@@ -59,31 +59,37 @@ async fn hacker_news(url: &str, count: usize) -> Result<(), reqwest::Error> {
     // assert!(resp.status().is_success());
     let document = Document::from(&*resp.text().await?);
 
-    for node in document.select(Class("mln24")).take(count) {
-        let question = node.select(Class("excerpt")).next().unwrap().text();
-        let title_element = node.select(Class("question-hyperlink")).next().unwrap();
-        let title = title_element.text();
-        let question_link = title_element.attr("href").unwrap();
-        let votes = node.select(Class("vote-count-post")).next().unwrap().text();
-        let views = node.select(Class("views")).next().unwrap().text();
-        let striped_views = views.trim();
-        let tags = node
-            .select(Attr("class", "post-tag grid--cell"))
-            .map(|tag| tag.text())
-            .collect::<Vec<_>>();
-        let answer = node
-            .select(Or(
-                Attr("class", "status answered-accepted").descendant(Name("strong")),
-                Attr("class", "status answered").descendant(Name("strong")),
-            ))
+    for node in document.select(Class("s-post-summary")).take(count) {
+        let question = node
+            .select(Class("s-post-summary--content-excerpt"))
             .next()
             .unwrap()
             .text();
+        let title_element = node
+            .select(Class("s-post-summary--content-title").child(Name("a")))
+            .next()
+            .unwrap();
+        let title = title_element.text();
+        let question_link = title_element.attr("href").unwrap();
+        let stats = node
+            .select(Class("s-post-summary--stats-item-number"))
+            .map(|stat| stat.text())
+            .collect::<Vec<_>>();
+        let votes = &stats[0];
+        let answer = &stats[1];
+        let views = &stats[2];
+        let tags = node
+            .select(Class("post-tag"))
+            .map(|tag| tag.text())
+            .collect::<Vec<_>>();
         println!("Question       => {}", question);
-        println!("Question-link  => https://stackoverflow.com{}",question_link);
+        println!(
+            "Question-link  => https://stackoverflow.com{}",
+            question_link
+        );
         println!("Question-title => {}", title);
         println!("Votes          => {}", votes);
-        println!("Views          => {}", striped_views);
+        println!("Views          => {}", views);
         println!("Tags           => {}", tags.join(" ,"));
         println!("Answers        => {}", answer);
         println!("-------------------------------------------------------------\n");
